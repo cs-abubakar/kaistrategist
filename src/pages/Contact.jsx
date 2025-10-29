@@ -27,8 +27,7 @@ const Contact = () => {
 
     try {
       // Using Web3Forms - Free email service (get key at https://web3forms.com)
-      // Add your Web3Forms access key below
-      const WEB3FORMS_KEY = 'YOUR_WEB3FORMS_ACCESS_KEY_HERE';
+      const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY;
 
       const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
