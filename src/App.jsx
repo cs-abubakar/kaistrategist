@@ -7,6 +7,8 @@ import Research from './pages/Research';
 import Blog from './pages/Blog';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import CaseStudyDetail from './pages/CaseStudyDetail';
+import BlogPostDetail from './pages/BlogPostDetail';
 
 // Admin imports
 import AdminLogin from './pages/admin/AdminLogin';
@@ -28,8 +30,10 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/work" element={<Layout><Work /></Layout>} />
+          <Route path="/work/:id" element={<Layout><CaseStudyDetail /></Layout>} />
           <Route path="/research" element={<Layout><Research /></Layout>} />
           <Route path="/blog" element={<Layout><Blog /></Layout>} />
+          <Route path="/blog/:slug" element={<Layout><BlogPostDetail /></Layout>} />
           <Route path="/about" element={<Layout><About /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
 

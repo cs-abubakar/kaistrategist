@@ -1,10 +1,43 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
-import { caseStudies } from '../../data/caseStudies';
+import { caseStudiesAPI } from '../../utils/api';
 
 const FeaturedWork = () => {
-  const featuredCases = caseStudies.filter((cs) => cs.featured).slice(0, 3);
+  const [featuredCases, setFeaturedCases] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFeaturedCases();
+  }, []);
+
+  const fetchFeaturedCases = async () => {
+    try {
+      const data = await caseStudiesAPI.getAll(true);
+      setFeaturedCases(data.filter((cs) => cs.featured).slice(0, 3));
+    } catch (error) {
+      console.error('Error fetching case studies:', error);
+      // Fallback to empty array on error
+      setFeaturedCases([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <section className="section-padding">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="text-text-muted">Loading featured work...</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (featuredCases.length === 0) {
+    return null; // Don't show section if no featured cases
+  }
 
   return (
     <section className="section-padding">
@@ -42,10 +75,18 @@ const FeaturedWork = () => {
               className="glass rounded-2xl p-6 hover:border-primary-orange transition-all group"
             >
               {/* Cover Image or Placeholder */}
-              <div className="w-full aspect-video rounded-lg mb-4 flex items-center justify-center bg-white/5">
-                <div className="text-6xl font-extrabold text-white/20">
-                  {caseStudy.industry.charAt(0)}
-                </div>
+              <div className="w-full aspect-video rounded-lg mb-4 flex items-center justify-center bg-white/5 overflow-hidden">
+                {caseStudy.cover_image ? (
+                  <img
+                    src={`http://localhost:5000${caseStudy.cover_image}`}
+                    alt={caseStudy.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-6xl font-extrabold text-white/20">
+                    {caseStudy.industry.charAt(0)}
+                  </div>
+                )}
               </div>
 
               {/* Year Badge */}
@@ -93,7 +134,7 @@ const FeaturedWork = () => {
 
               {/* View Details Link */}
               <Link
-                to="/work"
+                to={`/work/${caseStudy.id}`}
                 className="inline-flex items-center gap-2 text-sm font-medium text-primary-orange hover:gap-3 transition-all"
               >
                 View Details
