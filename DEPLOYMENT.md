@@ -243,35 +243,73 @@ kaistrategist/
 
 ## 🚢 Production Deployment
 
-### Option 1: Deploy to Vercel (Frontend) + Railway (Backend)
+### Option 1: Deploy to Vercel (Frontend) + Railway (Backend) ⭐ RECOMMENDED
 
 #### Backend on Railway
 
+**Important:** The backend now auto-initializes the database and seeds data on startup!
+
 1. **Create Railway Project**
-   ```bash
-   # Install Railway CLI
-   npm i -g @railway/cli
+   - Go to [railway.app](https://railway.app) and login
+   - Click "New Project" → "Deploy from GitHub repo"
+   - Select your `kaistrategist` repository
+   - Choose the `backend` directory as the root path
 
-   # Login and initialize
-   railway login
-   railway init
+2. **Configure Environment Variables**
+
+   In Railway dashboard, add these environment variables:
+
+   ```env
+   # Required
+   PORT=5000
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=your-secure-password-here
+   JWT_SECRET=generate-32-char-random-string-here
+
+   # Optional
+   NODE_ENV=production
+   CORS_ORIGIN=https://your-frontend-domain.vercel.app
+   DB_PATH=./database.sqlite
+   MAX_FILE_SIZE=5242880
    ```
 
-2. **Configure Environment**
-   - Set all environment variables from `backend/.env`
-   - Update `CORS_ORIGIN` to your frontend URL
-   - Change `ADMIN_PASSWORD` and `JWT_SECRET`
-
-3. **Deploy**
+   **Generate secure JWT_SECRET:**
    ```bash
-   cd backend
-   railway up
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-4. **Initialize Database**
+3. **Set Start Command**
+
+   In Railway settings → Deploy → Custom Start Command:
    ```bash
-   railway run npm run init-db
+   node server.js
    ```
+
+4. **Deploy**
+   - Railway will automatically build and deploy
+   - The database will be auto-initialized on first start
+   - Check logs to verify successful startup
+
+5. **Verify Deployment**
+   ```bash
+   # Get your Railway URL from dashboard (e.g., https://kaistrategist-backend.up.railway.app)
+   curl https://your-railway-url.railway.app/health
+   ```
+
+   Should return:
+   ```json
+   {
+     "status": "ok",
+     "timestamp": "2025-01-29T...",
+     "environment": "production",
+     "port": 5000
+   }
+   ```
+
+6. **Persistent Storage (Optional but Recommended)**
+   - In Railway dashboard: Add Volume
+   - Mount path: `/app/backend/database.sqlite`
+   - This ensures your database persists across deployments
 
 #### Frontend on Vercel
 
@@ -379,18 +417,64 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## 🐛 Troubleshooting
 
-### Backend won't start
+### Railway Backend Crashes
+
+**Problem:** Backend keeps restarting on Railway
+
+**Solutions:**
+
+1. **Check Logs**
+   - Open Railway dashboard → Your service → Deployments → Logs
+   - Look for error messages in startup logs
+
+2. **Common Issues:**
+
+   **Missing Environment Variables:**
+   ```
+   Error: ADMIN_USERNAME is not defined
+   ```
+   Solution: Add all required env vars in Railway dashboard
+
+   **Port Binding Issues:**
+   ```
+   Error: listen EADDRINUSE
+   ```
+   Solution: Railway automatically sets PORT env var, no action needed
+
+   **Database Initialization Errors:**
+   ```
+   Error: Database tables not created
+   ```
+   Solution: The backend now auto-initializes! Check logs for specific error.
+
+3. **Verify Health Endpoint**
+   ```bash
+   curl https://your-app.railway.app/health
+   ```
+
+   Expected response:
+   ```json
+   {"status":"ok","timestamp":"...","environment":"production","port":5000}
+   ```
+
+4. **Check Start Command**
+   - Settings → Deploy → Start Command should be: `node server.js`
+   - Build Command should be: `npm install`
+   - Root Directory should be: `backend` (if deploying from repo root)
+
+### Backend won't start locally
 ```bash
 # Check if port 5000 is in use
 lsof -i :5000
 # Kill process if needed
 kill -9 <PID>
 
-# Verify database exists
+# Verify database exists (will be auto-created now)
 ls -la backend/database.sqlite
 
-# Reinitialize if needed
-cd backend && npm run init-db
+# Test server startup
+cd backend
+node server.js
 ```
 
 ### Frontend can't connect to backend

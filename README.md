@@ -324,19 +324,41 @@ See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for complete deployment instructions in
 
 ### Quick Production Deploy
 
-**Frontend (Vercel):**
-```bash
-npm install -g vercel
-vercel
-```
+**Backend (Railway) - Deploy First:**
 
-**Backend (Railway):**
-```bash
-npm i -g @railway/cli
-railway login
-cd backend
-railway up
-```
+1. Go to [railway.app](https://railway.app) and connect your GitHub repo
+2. Select the `backend` directory as root
+3. Add environment variables in Railway dashboard:
+   ```env
+   PORT=5000
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=your-secure-password
+   JWT_SECRET=generate-32-char-string
+   NODE_ENV=production
+   ```
+4. Set start command: `node server.js`
+5. Deploy! Database auto-initializes on first start.
+6. Test: `curl https://your-app.railway.app/health`
+
+**Frontend (Vercel):**
+
+1. Install Vercel CLI: `npm i -g vercel`
+2. Update `.env`: `VITE_API_URL=https://your-backend.railway.app/api`
+3. Deploy: `vercel`
+4. Add environment variables in Vercel dashboard
+
+**✅ Required Environment Variables:**
+
+Backend (Railway):
+- `PORT` - 5000
+- `ADMIN_USERNAME` - your admin username
+- `ADMIN_PASSWORD` - secure password
+- `JWT_SECRET` - 32+ char random string
+- `NODE_ENV` - production
+
+Frontend (Vercel):
+- `VITE_WEB3FORMS_KEY` - 412d29d7-9b56-466e-a78f-d87d646692ef
+- `VITE_API_URL` - https://your-backend.railway.app/api
 
 ---
 

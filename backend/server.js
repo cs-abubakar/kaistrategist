@@ -6,6 +6,16 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+
+// Load environment variables first
+dotenv.config();
+
+// Import database (this will auto-initialize tables)
+import './config/database.js';
+
+// Import seed function
+import { seedDatabase } from './config/seed.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -17,14 +27,26 @@ import profileRoutes from './routes/profileRoutes.js';
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 
-// Load environment variables
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Ensure uploads directory exists
+const uploadsDir = join(__dirname, 'uploads');
+if (!existsSync(uploadsDir)) {
+  mkdirSync(uploadsDir, { recursive: true });
+  console.log('📁 Created uploads directory');
+}
+
+// Seed database on startup
+try {
+  seedDatabase();
+} catch (error) {
+  console.error('⚠️  Warning: Database seeding failed:', error.message);
+  // Don't exit - let the server start anyway
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -37,10 +59,15 @@ const limiter = rateLimit({
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
-}));
+
+// CORS - allow all origins in production for Railway
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -54,7 +81,8 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT
   });
 });
 
@@ -66,6 +94,23 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/profile', profileRoutes);
 
 // Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'KAI Portfolio Backend API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      caseStudies: '/api/case-studies',
+      publications: '/api/publications',
+      blog: '/api/blog',
+      profile: '/api/profile'
+    }
+  });
+});
+
+// API info endpoint
 app.get('/api', (req, res) => {
   res.json({
     message: 'KAI Portfolio Backend API',
@@ -88,8 +133,8 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server - bind to 0.0.0.0 for Railway
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔═══════════════════════════════════════╗
 ║   KAI Portfolio Backend API Server   ║
@@ -100,15 +145,33 @@ app.listen(PORT, () => {
 📝 API Documentation: http://localhost:${PORT}/api
 
 Available endpoints:
-  - Health Check: http://localhost:${PORT}/health
-  - Auth: http://localhost:${PORT}/api/auth
-  - Case Studies: http://localhost:${PORT}/api/case-studies
-  - Publications: http://localhost:${PORT}/api/publications
-  - Blog: http://localhost:${PORT}/api/blog
-  - Profile: http://localhost:${PORT}/api/profile
+  - Health Check: GET /health
+  - Root: GET /
+  - Auth: POST /api/auth/login
+  - Case Studies: GET /api/case-studies
+  - Publications: GET /api/publications
+  - Blog: GET /api/blog
+  - Profile: GET /api/profile
 
 Press Ctrl+C to stop the server
   `);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
 });
 
 export default app;
